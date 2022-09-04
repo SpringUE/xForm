@@ -1,66 +1,3 @@
-<template>
-  <div class="x-form">
-    <el-form ref="form" v-bind="formProps" :model="model" :rules="rules">
-      <el-row :gutter="gutter">
-        <el-col v-for="(item, index) in items" :key="item.field + '.' + index"
-          :span="item.hidden(model, item) ? 0 : item.span" :offset="item.offset"
-          :class="item.offsetRight ? 'ant-col-offset-right-' + item.offsetRight : ''">
-          <el-form-item v-if="
-            !item.hidden(model, item) &&
-            !item.state.hidden &&
-            !item.state.hiddenWithHolder" 
-            :label="item.label" 
-            :name="item.field" 
-            :rules="item.rule" :class="{
-              'x-form-flex-item': item.editor.prefix || item.editor.suffix,
-            }">
-            <!-- 前置组件 -->
-            <component v-if="item.editor.prefix" :is="item.editor.prefix" />
-            <!-- 文本展示 -->
-            <span :ref="item.ref" class="x-form-item-text" v-if="!item.editor || item.editor.component === 'text'">
-              {{ model[item.field] }}
-            </span>
-            <!-- 一般输入组件 -->
-            <div class="x-form-item-component" v-else>
-              <component :is="item.editor.component" :ref="item.ref" v-model:value="model[item.field]"
-                v-bind="item.editor.props" v-on="item.editor.events">
-                <template v-if="item.editor.component === comps.RadioGroup">
-                  <el-radio v-for="(radio, index) in item.editor.props.options" :key="index" style="margin-top: 10px"
-                    :label="radio.value" :disabled="radio.disabled">
-                    {{ radio.label }}
-                  </el-radio>
-                </template>
-
-                <template v-if="item.editor.component === comps.CheckboxGroup">
-                  <el-checkbox v-for="(checkbox, index) in item.editor.props.options" :key="index"
-                    :label="checkbox.value">
-                    {{ checkbox.label }}
-                  </el-checkbox>
-                </template>
-
-                <template v-if="item.editor.component === comps.Select">
-                  <el-option v-for="(option, index) in item.editor.props.options" :key="index" :label="option.label"
-                    :value="option.value"></el-option>
-                </template>
-              </component>
-            </div>
-            <!-- 后置组件 -->
-            <component v-if="item.editor.suffix" :is="item.editor.suffix" />
-          </el-form-item>
-          <div :ref="item.ref" class="x-form-item-holder" v-if="item.state.hiddenWithHolder"></div>
-        </el-col>
-      </el-row>
-      <div class="x-form-submitbar" v-if="showSubmitBar">
-        <el-button type="primary" @click="onSubmit">{{
-            submitBtnText
-        }}</el-button>
-        <el-button @click="onReset">{{ resetBtnText }}</el-button>
-      </div>
-    </el-form>
-  </div>
-</template>
-
-<script>
 /**
 XForm功能：
 *基于element-ui的el-form封装，使用json配置生成表单
@@ -77,7 +14,7 @@ XForm功能：
 
 const formators = {};
 
-export default {
+const __sfc__ = {
   name: "XForm",
 
   props: {
@@ -566,136 +503,166 @@ export default {
     },
   },
 };
-</script>
 
-<style lang="scss" scoped>
-.x-form {
-  ::v-deep .ant-form {
-    .ant-col-offset-right {
-      &-24 {
-        margin-right: 100%;
-      }
+import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, resolveDynamicComponent as _resolveDynamicComponent, createBlock as _createBlock, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, toHandlers as _toHandlers, mergeProps as _mergeProps, createElementVNode as _createElementVNode, normalizeClass as _normalizeClass, createVNode as _createVNode } from "vue"
 
-      &-23 {
-        margin-right: 95.83333333%;
-      }
-
-      &-22 {
-        margin-right: 91.66666667%;
-      }
-
-      &-21 {
-        margin-right: 87.5%;
-      }
-
-      &-20 {
-        margin-right: 83.33333333%;
-      }
-
-      &-19 {
-        margin-right: 79.16666667%;
-      }
-
-      &-18 {
-        margin-right: 75%;
-      }
-
-      &-17 {
-        margin-right: 70.83333333%;
-      }
-
-      &-16 {
-        margin-right: 66.66666667%;
-      }
-
-      &-15 {
-        margin-right: 62.5%;
-      }
-
-      &-14 {
-        margin-right: 58.33333333%;
-      }
-
-      &-13 {
-        margin-right: 54.16666667%;
-      }
-
-      &-12 {
-        margin-right: 50%;
-      }
-
-      &-11 {
-        margin-right: 45.83333333%;
-      }
-
-      &-10 {
-        margin-right: 41.66666667%;
-      }
-
-      &-9 {
-        margin-right: 37.5%;
-      }
-
-      &-8 {
-        margin-right: 33.33333333%;
-      }
-
-      &-7 {
-        margin-right: 29.16666667%;
-      }
-
-      &-6 {
-        margin-right: 25%;
-      }
-
-      &-5 {
-        margin-right: 20.83333333%;
-      }
-
-      &-4 {
-        margin-right: 16.66666667%;
-      }
-
-      &-3 {
-        margin-right: 12.5%;
-      }
-
-      &-2 {
-        margin-right: 8.33333333%;
-      }
-
-      &-1 {
-        margin-right: 4.16666667%;
-      }
-
-      &-0 {
-        margin-right: 0;
-      }
-    }
-  }
-
-  &-flex-item {
-    ::v-deep .el-form-item__content {
-      display: flex;
-
-      >.x-form-item-component {
-        flex: 1;
-      }
-    }
-  }
-
-  &-item-component {
-    >.el-select {
-      width: 100%;
-    }
-  }
-
-  &-submitbar {
-    text-align: center;
-
-    >button {
-      margin: 0 5px;
-    }
-  }
+const _hoisted_1 = { class: "x-form" }
+const _hoisted_2 = { class: "x-form-item-component" }
+const _hoisted_3 = {
+  key: 0,
+  class: "x-form-submitbar"
 }
-</style>
+function render(_ctx, _cache, $props, $setup, $data, $options) {
+  const _component_el_radio = _resolveComponent("el-radio")
+  const _component_el_checkbox = _resolveComponent("el-checkbox")
+  const _component_el_option = _resolveComponent("el-option")
+  const _component_el_form_item = _resolveComponent("el-form-item")
+  const _component_el_col = _resolveComponent("el-col")
+  const _component_el_row = _resolveComponent("el-row")
+  const _component_el_button = _resolveComponent("el-button")
+  const _component_el_form = _resolveComponent("el-form")
+
+  return (_openBlock(), _createElementBlock("div", _hoisted_1, [
+    _createVNode(_component_el_form, _mergeProps({ ref: "form" }, $options.formProps, {
+      model: $data.model,
+      rules: $data.rules
+    }), {
+      default: _withCtx(() => [
+        _createVNode(_component_el_row, { gutter: $props.gutter }, {
+          default: _withCtx(() => [
+            (_openBlock(true), _createElementBlock(_Fragment, null, _renderList($data.items, (item, index) => {
+              return (_openBlock(), _createBlock(_component_el_col, {
+                key: item.field + '.' + index,
+                span: item.hidden($data.model, item) ? 0 : item.span,
+                offset: item.offset,
+                class: _normalizeClass(item.offsetRight ? 'ant-col-offset-right-' + item.offsetRight : '')
+              }, {
+                default: _withCtx(() => [
+                  (
+            !item.hidden($data.model, item) &&
+            !item.state.hidden &&
+            !item.state.hiddenWithHolder)
+                    ? (_openBlock(), _createBlock(_component_el_form_item, {
+                        key: 0,
+                        label: item.label,
+                        name: item.field,
+                        rules: item.rule,
+                        class: _normalizeClass({
+              'x-form-flex-item': item.editor.prefix || item.editor.suffix,
+            })
+                      }, {
+                        default: _withCtx(() => [
+                          _createCommentVNode(" 前置组件 "),
+                          (item.editor.prefix)
+                            ? (_openBlock(), _createBlock(_resolveDynamicComponent(item.editor.prefix), { key: 0 }))
+                            : _createCommentVNode("v-if", true),
+                          _createCommentVNode(" 文本展示 "),
+                          (!item.editor || item.editor.component === 'text')
+                            ? (_openBlock(), _createElementBlock("span", {
+                                key: 1,
+                                ref_for: true,
+                                ref: item.ref,
+                                class: "x-form-item-text"
+                              }, _toDisplayString($data.model[item.field]), 513 /* TEXT, NEED_PATCH */))
+                            : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [
+                                _createCommentVNode(" 一般输入组件 "),
+                                _createElementVNode("div", _hoisted_2, [
+                                  (_openBlock(), _createBlock(_resolveDynamicComponent(item.editor.component), _mergeProps({
+                                    ref_for: true,
+                                    ref: item.ref,
+                                    value: $data.model[item.field],
+                                    "onUpdate:value": $event => (($data.model[item.field]) = $event)
+                                  }, item.editor.props, _toHandlers(item.editor.events)), {
+                                    default: _withCtx(() => [
+                                      (item.editor.component === $data.comps.RadioGroup)
+                                        ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(item.editor.props.options, (radio, index) => {
+                                            return (_openBlock(), _createBlock(_component_el_radio, {
+                                              key: index,
+                                              style: {"margin-top":"10px"},
+                                              label: radio.value,
+                                              disabled: radio.disabled
+                                            }, {
+                                              default: _withCtx(() => [
+                                                _createTextVNode(_toDisplayString(radio.label), 1 /* TEXT */)
+                                              ]),
+                                              _: 2 /* DYNAMIC */
+                                            }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label", "disabled"]))
+                                          }), 128 /* KEYED_FRAGMENT */))
+                                        : _createCommentVNode("v-if", true),
+                                      (item.editor.component === $data.comps.CheckboxGroup)
+                                        ? (_openBlock(true), _createElementBlock(_Fragment, { key: 1 }, _renderList(item.editor.props.options, (checkbox, index) => {
+                                            return (_openBlock(), _createBlock(_component_el_checkbox, {
+                                              key: index,
+                                              label: checkbox.value
+                                            }, {
+                                              default: _withCtx(() => [
+                                                _createTextVNode(_toDisplayString(checkbox.label), 1 /* TEXT */)
+                                              ]),
+                                              _: 2 /* DYNAMIC */
+                                            }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label"]))
+                                          }), 128 /* KEYED_FRAGMENT */))
+                                        : _createCommentVNode("v-if", true),
+                                      (item.editor.component === $data.comps.Select)
+                                        ? (_openBlock(true), _createElementBlock(_Fragment, { key: 2 }, _renderList(item.editor.props.options, (option, index) => {
+                                            return (_openBlock(), _createBlock(_component_el_option, {
+                                              key: index,
+                                              label: option.label,
+                                              value: option.value
+                                            }, null, 8 /* PROPS */, ["label", "value"]))
+                                          }), 128 /* KEYED_FRAGMENT */))
+                                        : _createCommentVNode("v-if", true)
+                                    ]),
+                                    _: 2 /* DYNAMIC */
+                                  }, 1040 /* FULL_PROPS, DYNAMIC_SLOTS */, ["value", "onUpdate:value"]))
+                                ])
+                              ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
+                          _createCommentVNode(" 后置组件 "),
+                          (item.editor.suffix)
+                            ? (_openBlock(), _createBlock(_resolveDynamicComponent(item.editor.suffix), { key: 3 }))
+                            : _createCommentVNode("v-if", true)
+                        ]),
+                        _: 2 /* DYNAMIC */
+                      }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label", "name", "rules", "class"]))
+                    : _createCommentVNode("v-if", true),
+                  (item.state.hiddenWithHolder)
+                    ? (_openBlock(), _createElementBlock("div", {
+                        key: 1,
+                        ref_for: true,
+                        ref: item.ref,
+                        class: "x-form-item-holder"
+                      }, null, 512 /* NEED_PATCH */))
+                    : _createCommentVNode("v-if", true)
+                ]),
+                _: 2 /* DYNAMIC */
+              }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["span", "offset", "class"]))
+            }), 128 /* KEYED_FRAGMENT */))
+          ]),
+          _: 1 /* STABLE */
+        }, 8 /* PROPS */, ["gutter"]),
+        ($props.showSubmitBar)
+          ? (_openBlock(), _createElementBlock("div", _hoisted_3, [
+              _createVNode(_component_el_button, {
+                type: "primary",
+                onClick: $options.onSubmit
+              }, {
+                default: _withCtx(() => [
+                  _createTextVNode(_toDisplayString($props.submitBtnText), 1 /* TEXT */)
+                ]),
+                _: 1 /* STABLE */
+              }, 8 /* PROPS */, ["onClick"]),
+              _createVNode(_component_el_button, { onClick: $options.onReset }, {
+                default: _withCtx(() => [
+                  _createTextVNode(_toDisplayString($props.resetBtnText), 1 /* TEXT */)
+                ]),
+                _: 1 /* STABLE */
+              }, 8 /* PROPS */, ["onClick"])
+            ]))
+          : _createCommentVNode("v-if", true)
+      ]),
+      _: 1 /* STABLE */
+    }, 16 /* FULL_PROPS */, ["model", "rules"])
+  ]))
+}
+__sfc__.render = render
+__sfc__.__file = "XForm.vue"
+export default __sfc__
