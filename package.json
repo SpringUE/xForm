@@ -3,21 +3,22 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "npm run serve",
-    "build": "vue-cli-service build",
+    "build": "rollup src/components/XForm-element.vue",
     "lint": "vue-cli-service lint --fix",
     "test:unit": "vue-cli-service test:unit"
   },
   "dependencies": {
-    "element-ui": "^2.13.1",
-    "vue": "^2.6.11"
+    "vue": "^3.2.36"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^4.1.0",
-    "@vue/cli-service": "^4.1.0"
+    "@vue/cli-plugin-babel": "~4.5.0",
+    "@vue/cli-plugin-eslint": "~4.5.0",
+    "@vue/cli-service": "~4.5.0",
+    "rollup-plugin-babel": "^4.4.0",
+    "rollup-plugin-less": "^1.1.3",
+    "rollup-plugin-vue": "^6.0.0"
   },
-  "config": {
-    
-  },
+  "config": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/SpringUE/xForm.git"

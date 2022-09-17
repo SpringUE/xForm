@@ -4,14 +4,15 @@
       <el-row :gutter="gutter">
         <el-col v-for="(item, index) in items" :key="item.field + '.' + index"
           :span="item.hidden(model, item) ? 0 : item.span" :offset="item.offset"
-          :class="item.offsetRight ? 'ant-col-offset-right-' + item.offsetRight : ''">
+          :class="item.offsetRight ? 'form-col-offset-right-' + item.offsetRight : ''">
           <el-form-item v-if="
             !item.hidden(model, item) &&
             !item.state.hidden &&
             !item.state.hiddenWithHolder" 
             :label="item.label" 
-            :name="item.field" 
-            :rules="item.rule" :class="{
+            :prop="item.field" 
+            :rules="item.rule" 
+            :class="{
               'x-form-flex-item': item.editor.prefix || item.editor.suffix,
             }">
             <!-- 前置组件 -->
@@ -22,26 +23,43 @@
             </span>
             <!-- 一般输入组件 -->
             <div class="x-form-item-component" v-else>
-              <component :is="item.editor.component" :ref="item.ref" v-model:value="model[item.field]"
-                v-bind="item.editor.props" v-on="item.editor.events">
-                <template v-if="item.editor.component === comps.RadioGroup">
-                  <el-radio v-for="(radio, index) in item.editor.props.options" :key="index" style="margin-top: 10px"
-                    :label="radio.value" :disabled="radio.disabled">
-                    {{ radio.label }}
-                  </el-radio>
-                </template>
-
-                <template v-if="item.editor.component === comps.CheckboxGroup">
-                  <el-checkbox v-for="(checkbox, index) in item.editor.props.options" :key="index"
-                    :label="checkbox.value">
-                    {{ checkbox.label }}
-                  </el-checkbox>
-                </template>
-
-                <template v-if="item.editor.component === comps.Select">
-                  <el-option v-for="(option, index) in item.editor.props.options" :key="index" :label="option.label"
-                    :value="option.value"></el-option>
-                </template>
+              <!-- 单选 -->
+              <el-radio-group v-if="item.editor.component === 'el-radio-group'" 
+                :ref="item.ref" 
+                v-model="model[item.field]"
+                v-bind="item.editor.props" 
+                v-on="item.editor.events">
+                <el-radio v-for="radio in item.editor.props.options" :key="radio.value"
+                  :label="radio.value" :disabled="radio.disabled">
+                  {{ radio.label }}
+                </el-radio>
+              </el-radio-group>
+              <!-- 复选 -->
+              <el-checkbox-group v-else-if="item.editor.component === 'el-checkbox-group'" 
+                :ref="item.ref" 
+                v-model="model[item.field]"
+                v-bind="item.editor.props" 
+                v-on="item.editor.events">
+                <el-checkbox v-for="checkbox in item.editor.props.options" :key="checkbox.value"
+                  :label="checkbox.value" :name="item.field">
+                  {{ checkbox.label }}
+                </el-checkbox>
+              </el-checkbox-group>
+              <!-- 下拉 -->
+              <el-select v-if="item.editor.component === 'el-select'" 
+                :ref="item.ref" 
+                v-model="model[item.field]"
+                v-bind="item.editor.props" 
+                v-on="item.editor.events">
+                <el-option v-for="option in item.editor.props.options" :key="option.value" :label="option.label"
+                  :value="option.value"></el-option>
+              </el-select>
+              <!-- 其他所有组件 -->
+              <component v-else :is="item.editor.component" 
+                :ref="item.ref" 
+                v-model="model[item.field]"
+                v-bind="item.editor.props" 
+                v-on="item.editor.events">
               </component>
             </div>
             <!-- 后置组件 -->
@@ -62,18 +80,29 @@
 
 <script>
 /**
-XForm功能：
-*基于element-ui的el-form封装，使用json配置生成表单
-*支持栅格化布局，支持向右排斥槽位(例如一个为span=4的表单项但占一行)
-*支持表单项前置&后置插槽
-*支持任意组件，以及props|events传参
-*内置依赖联动功能
-*支持选择任意表单项进行事件监听或者操作赋值等
-*支持动态插入表单项
-*支持跨表单项联动
-*记忆重置功能
+功能清单:
+- jsonSchema式配置
+- 基于element-plus组件库  
+- 栅格化布局
+- 支持表单项前后插槽  
+- 任意形式组件 
+- 支持组件prop属性
+- 支持组件event监听
+- 内置Sugges功能
+- 内置依赖联动功能  
+- 支持动态插入表单项  
+- 跨表单项联动  
+- 记忆重置功能  
+- 支持解构赋值
+- 支持向右排斥栅格布局
+- 支持动态多事件监听
+- 支持动态操作赋值
+- 支持动态ref操作
+- 支持动态显隐操作
+- 支持动态更新必(非必)填
+- 支持动态保留槽位式隐藏  
+- 支持动态设置控件属性
  */
-// import { RadioGroup, CheckboxGroup, Select } from 'ant-design-vue';
 
 const formators = {};
 
@@ -82,7 +111,7 @@ export default {
 
   props: {
     // 绑定值
-    value: {
+    modelValue: {
       type: Object,
       required: true,
       default: () => ({}),
@@ -169,7 +198,8 @@ export default {
   },
 
   watch: {
-    value(nv) {
+    // 此处勿深度监听，对象的每个字段已分别监听
+    modelValue(nv) {
       this.writeBack(nv);
     },
   },
@@ -185,9 +215,9 @@ export default {
       const rules = (this.rules = this.createFormRules(items));
       console.log("items", items);
       console.log("depMap", this.depMap);
-      this.writeBack(this.value);
+      this.writeBack(this.modelValue);
       // 储存初始model
-      this.__defaultModelVal = JSON.parse(JSON.stringify(this.value));
+      this.__defaultModelVal = JSON.parse(JSON.stringify(this.modelValue));
     },
 
     writeBack(nv) {
@@ -347,7 +377,7 @@ export default {
     setModelValue(item, nv) {
       // 赋值时跳过内部监听
       item.watcher.unwatch();
-      this.value[item.field] = nv;
+      this.modelValue[item.field] = nv;
       item.watcher.watch();
     },
 
@@ -367,8 +397,7 @@ export default {
       const target = {};
       target.watch = () => {
         // 每个表单项单独监听，避免相互影响
-        target.$watcher = this.$watch(`value.${item.field}`, (nv) => {
-          debugger
+        target.$watcher = this.$watch(`modelValue.${item.field}`, (nv) => {
           this.model[item.field] = nv;
         });
       };
@@ -407,13 +436,18 @@ export default {
 
       if (suggest) {
         _effects.suggest = {
-          trigger: "focus",
-          times: "once",
+          trigger: 'focus',
+          times: 'once',
           lazy: true,
-          dataPropName: "options",
+          dataPropName: 'options',
           isOnceAlready: false,
           ...suggest,
         };
+
+        if(dependency) {
+          _effects.suggest.times = 'every'
+        }
+        
         const {
           loader,
           trigger,
@@ -432,9 +466,9 @@ export default {
         });
 
         // 聚焦时加载
-        if (trigger === "focus") {
+        // if (trigger === "focus") {
           item.lisenters.focus = [].concat(item.lisenters.focus || [], load);
-        }
+        // }
 
         // 即时加载
         if (lazy === false) {
@@ -516,6 +550,12 @@ export default {
           });
           return handler;
         },
+        required(nv) {
+          return items.map((x) => {
+            const rule = [].concat(x.rule || []).find(y => y.required !== undefined)
+            rule && (rule.required = nv)
+          });
+        },
         getRefs() {
           return items.map((x) => vm.$refs[x.ref]);
         },
@@ -568,10 +608,10 @@ export default {
 };
 </script>
 
-<style lang="scss" scoped>
+<style lang="less" scoped>
 .x-form {
-  ::v-deep .ant-form {
-    .ant-col-offset-right {
+  ::v-deep .el-form {
+    .form-col-offset-right {
       &-24 {
         margin-right: 100%;
       }
@@ -685,6 +725,8 @@ export default {
   }
 
   &-item-component {
+    width: 100%;
+
     >.el-select {
       width: 100%;
     }
