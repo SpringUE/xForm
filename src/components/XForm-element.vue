@@ -3,7 +3,7 @@
     <el-form ref="form" v-bind="formProps" :model="model" :rules="rules">
       <el-row :gutter="gutter">
         <el-col v-for="(item, index) in items" :key="item.field + '.' + index"
-          :span="item.hidden(model, item) ? 0 : item.span" :offset="item.offset"
+          :span="item.hidden(model, item) || item.state.hidden ? 0 : item.span" :offset="item.offset"
           :class="item.offsetRight ? 'form-col-offset-right-' + item.offsetRight : ''">
           <el-form-item v-if="
             !item.hidden(model, item) &&
@@ -211,27 +211,30 @@ export default {
   methods: {
     init() {
       const items = (this.items = this.createFormItems(this.schema));
-      const model = (this.model = this.createFormModel(items));
-      const rules = (this.rules = this.createFormRules(items));
-      console.log("items", items);
-      console.log("depMap", this.depMap);
+      this.model = this.createFormModel(items)
+      this.rules = this.createFormRules(items)
       this.writeBack(this.modelValue);
       // 储存初始model
       this.__defaultModelVal = JSON.parse(JSON.stringify(this.modelValue));
+      console.log("XForm", items, this.model, this.depMap);
     },
 
     writeBack(nv) {
-      this.model = { ...this.model, ...nv };
+      const resolveValue = (item, val) => item.syntaxData.syntaxNames ? item.syntaxData.resolve(val) : val[item.field]
+      // this.model = { ...this.model, ...nv };
       this.items.forEach((x) => {
-        if (x.effects && x.effects.suggest && x.effects.suggest.load) {
+        if (x.effects?.suggest?.load) {
           if (
             nv[x.field] !== null &&
             nv[x.field] !== undefined &&
             nv[x.field] !== ""
           ) {
-            x.effects.suggest.load(nv[x.field], this.model, x);
+            const value = resolveValue(x, nv)
+            x.effects.suggest.load(value, this.model, x);
           }
         }
+
+        this.model[x.field] = resolveValue(x, nv)
       });
     },
 
@@ -277,12 +280,13 @@ export default {
           lisenters: {
             change: [],
           },
+          selectItems: this.selectItems
         };
 
         item.editor = this.createItemEditor(item, editor);
         item.effects = this.createItemEffects(item, effects, depMap);
         item.watcher = this.createItemWatcher(item);
-        item.syntaxNames = this.createSyntaxNames(item.field);
+        item.syntaxData = this.createSyntaxData(item.field);
         item.render = render ? this.createItemRender(item, render) : null;
         item.formator = formator
           ? this.createItemFormator(item, formator)
@@ -377,7 +381,11 @@ export default {
     setModelValue(item, nv) {
       // 赋值时跳过内部监听
       item.watcher.unwatch();
-      this.modelValue[item.field] = nv;
+      if(item.syntaxData.syntaxNames) {
+        item.syntaxData.writeBack(this.modelValue, nv)
+      } else {
+        this.modelValue[item.field] = nv;
+      }
       item.watcher.watch();
     },
 
@@ -411,8 +419,59 @@ export default {
 
     // 生成解构字段名
     createSyntaxNames(strName) {
-      const isValid = /\[|\{[^\[\]\{\}]\}|\}/.test(strName);
-      return isValid ? strName.match(/[^\[\]\{\},]/g) : null;
+      const isValid = /\[|\{[^\[\]\{\}]+\}|\]/.test(strName);
+      return isValid ? strName.match(/[^\[\]\{\},]+/g) : null;
+    },
+
+    // 生成解构功能数据
+    createSyntaxData(strName) {
+      let type = 'string'
+      if(/\{[^\[\]\{\}]+\}/.test(strName)) {
+        type = 'object'
+      } 
+      
+      if(/\[[^\[\]\{\}]+\]/.test(strName)) {
+        type = 'array'
+      }
+
+      const syntaxNames = type !== 'string' ? strName.match(/[^\[\]\{\},\s]+/g) : null
+      const resolve = (source) => {
+        if(!syntaxNames || !syntaxNames.length) {
+          return source
+        }
+
+        if(type === 'object') {
+          return syntaxNames.reduce((t, x) => {
+            t[x] = source && source[x]
+            return t
+          }, {})
+        }
+
+        if(type === 'array') {
+          return syntaxNames.map(x => source && source[x])
+        }
+
+        return source
+      }
+      const writeBack = (source, value) => {
+        syntaxNames.forEach((name, i) => {
+          let val = value
+          if(type === 'object') {
+            val = value && value[name]
+          }
+          if(type === 'array') {
+            val = value[i]
+          }
+          source[name] = val
+        })
+      }
+
+      return {
+        type,
+        resolve,
+        writeBack,
+        syntaxNames
+      }
     },
 
     // 生成自定义渲染器
