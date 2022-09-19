@@ -1,77 +1,77 @@
 
-.x-form .ant-form .ant-col-offset-right-24 {
+.x-form .el-form .form-col-offset-right-24 {
   margin-right: 100%;
 }
-.x-form .ant-form .ant-col-offset-right-23 {
+.x-form .el-form .form-col-offset-right-23 {
   margin-right: 95.83333333%;
 }
-.x-form .ant-form .ant-col-offset-right-22 {
+.x-form .el-form .form-col-offset-right-22 {
   margin-right: 91.66666667%;
 }
-.x-form .ant-form .ant-col-offset-right-21 {
+.x-form .el-form .form-col-offset-right-21 {
   margin-right: 87.5%;
 }
-.x-form .ant-form .ant-col-offset-right-20 {
+.x-form .el-form .form-col-offset-right-20 {
   margin-right: 83.33333333%;
 }
-.x-form .ant-form .ant-col-offset-right-19 {
+.x-form .el-form .form-col-offset-right-19 {
   margin-right: 79.16666667%;
 }
-.x-form .ant-form .ant-col-offset-right-18 {
+.x-form .el-form .form-col-offset-right-18 {
   margin-right: 75%;
 }
-.x-form .ant-form .ant-col-offset-right-17 {
+.x-form .el-form .form-col-offset-right-17 {
   margin-right: 70.83333333%;
 }
-.x-form .ant-form .ant-col-offset-right-16 {
+.x-form .el-form .form-col-offset-right-16 {
   margin-right: 66.66666667%;
 }
-.x-form .ant-form .ant-col-offset-right-15 {
+.x-form .el-form .form-col-offset-right-15 {
   margin-right: 62.5%;
 }
-.x-form .ant-form .ant-col-offset-right-14 {
+.x-form .el-form .form-col-offset-right-14 {
   margin-right: 58.33333333%;
 }
-.x-form .ant-form .ant-col-offset-right-13 {
+.x-form .el-form .form-col-offset-right-13 {
   margin-right: 54.16666667%;
 }
-.x-form .ant-form .ant-col-offset-right-12 {
+.x-form .el-form .form-col-offset-right-12 {
   margin-right: 50%;
 }
-.x-form .ant-form .ant-col-offset-right-11 {
+.x-form .el-form .form-col-offset-right-11 {
   margin-right: 45.83333333%;
 }
-.x-form .ant-form .ant-col-offset-right-10 {
+.x-form .el-form .form-col-offset-right-10 {
   margin-right: 41.66666667%;
 }
-.x-form .ant-form .ant-col-offset-right-9 {
+.x-form .el-form .form-col-offset-right-9 {
   margin-right: 37.5%;
 }
-.x-form .ant-form .ant-col-offset-right-8 {
+.x-form .el-form .form-col-offset-right-8 {
   margin-right: 33.33333333%;
 }
-.x-form .ant-form .ant-col-offset-right-7 {
+.x-form .el-form .form-col-offset-right-7 {
   margin-right: 29.16666667%;
 }
-.x-form .ant-form .ant-col-offset-right-6 {
+.x-form .el-form .form-col-offset-right-6 {
   margin-right: 25%;
 }
-.x-form .ant-form .ant-col-offset-right-5 {
+.x-form .el-form .form-col-offset-right-5 {
   margin-right: 20.83333333%;
 }
-.x-form .ant-form .ant-col-offset-right-4 {
+.x-form .el-form .form-col-offset-right-4 {
   margin-right: 16.66666667%;
 }
-.x-form .ant-form .ant-col-offset-right-3 {
+.x-form .el-form .form-col-offset-right-3 {
   margin-right: 12.5%;
 }
-.x-form .ant-form .ant-col-offset-right-2 {
+.x-form .el-form .form-col-offset-right-2 {
   margin-right: 8.33333333%;
 }
-.x-form .ant-form .ant-col-offset-right-1 {
+.x-form .el-form .form-col-offset-right-1 {
   margin-right: 4.16666667%;
 }
-.x-form .ant-form .ant-col-offset-right-0 {
+.x-form .el-form .form-col-offset-right-0 {
   margin-right: 0;
 }
 .x-form-flex-item .el-form-item__content {
@@ -80,7 +80,11 @@
 .x-form-flex-item .el-form-item__content > .x-form-item-component {
   flex: 1;
 }
-.x-form-item-component > .el-select {
+.x-form-item-component {
+  width: 100%;
+}
+.x-form-item-component > .el-select,
+.x-form-item-component > .el-date-editor {
   width: 100%;
 }
 .x-form-submitbar {

@@ -3,7 +3,7 @@
     <el-form ref="form" v-bind="formProps" :model="model" :rules="rules">
       <el-row :gutter="gutter">
         <el-col v-for="(item, index) in items" :key="item.field + '.' + index"
-          :span="item.hidden(model, item) || item.state.hidden ? 0 : item.span" :offset="item.offset"
+          :span="item.hidden(model, item) || item.state.hidden ? 0 : item.span" :xs="24" :offset="item.offset"
           :class="item.offsetRight ? 'form-col-offset-right-' + item.offsetRight : ''">
           <el-form-item v-if="
             !item.hidden(model, item) &&
@@ -786,7 +786,8 @@ export default {
   &-item-component {
     width: 100%;
 
-    >.el-select {
+    ::v-deep >.el-select,
+    ::v-deep >.el-date-editor {
       width: 100%;
     }
   }

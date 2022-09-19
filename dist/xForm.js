@@ -1,16 +1,3 @@
-/**
-XForm功能：
-*基于element-ui的el-form封装，使用json配置生成表单
-*支持栅格化布局，支持向右排斥槽位(例如一个为span=4的表单项但占一行)
-*支持表单项前置&后置插槽
-*支持任意组件，以及props|events传参
-*内置依赖联动功能
-*支持选择任意表单项进行事件监听或者操作赋值等
-*支持动态插入表单项
-*支持跨表单项联动
-*记忆重置功能
- */
-// import { RadioGroup, CheckboxGroup, Select } from 'ant-design-vue';
 
 const formators = {};
 
@@ -19,7 +6,7 @@ const __sfc__ = {
 
   props: {
     // 绑定值
-    value: {
+    modelValue: {
       type: Object,
       required: true,
       default: () => ({}),
@@ -106,7 +93,8 @@ const __sfc__ = {
   },
 
   watch: {
-    value(nv) {
+    // 此处勿深度监听，对象的每个字段已分别监听
+    modelValue(nv) {
       this.writeBack(nv);
     },
   },
@@ -118,27 +106,30 @@ const __sfc__ = {
   methods: {
     init() {
       const items = (this.items = this.createFormItems(this.schema));
-      const model = (this.model = this.createFormModel(items));
-      const rules = (this.rules = this.createFormRules(items));
-      console.log("items", items);
-      console.log("depMap", this.depMap);
-      this.writeBack(this.value);
+      this.model = this.createFormModel(items)
+      this.rules = this.createFormRules(items)
+      this.writeBack(this.modelValue);
       // 储存初始model
-      this.__defaultModelVal = JSON.parse(JSON.stringify(this.value));
+      this.__defaultModelVal = JSON.parse(JSON.stringify(this.modelValue));
+      console.log("XForm", items, this.model, this.depMap);
     },
 
     writeBack(nv) {
-      this.model = { ...this.model, ...nv };
+      const resolveValue = (item, val) => item.syntaxData.syntaxNames ? item.syntaxData.resolve(val) : val[item.field]
+      // this.model = { ...this.model, ...nv };
       this.items.forEach((x) => {
-        if (x.effects && x.effects.suggest && x.effects.suggest.load) {
+        if (x.effects?.suggest?.load) {
           if (
             nv[x.field] !== null &&
             nv[x.field] !== undefined &&
             nv[x.field] !== ""
           ) {
-            x.effects.suggest.load(nv[x.field], this.model, x);
+            const value = resolveValue(x, nv)
+            x.effects.suggest.load(value, this.model, x);
           }
         }
+
+        this.model[x.field] = resolveValue(x, nv)
       });
     },
 
@@ -184,12 +175,13 @@ const __sfc__ = {
           lisenters: {
             change: [],
           },
+          selectItems: this.selectItems
         };
 
         item.editor = this.createItemEditor(item, editor);
         item.effects = this.createItemEffects(item, effects, depMap);
         item.watcher = this.createItemWatcher(item);
-        item.syntaxNames = this.createSyntaxNames(item.field);
+        item.syntaxData = this.createSyntaxData(item.field);
         item.render = render ? this.createItemRender(item, render) : null;
         item.formator = formator
           ? this.createItemFormator(item, formator)
@@ -284,7 +276,11 @@ const __sfc__ = {
     setModelValue(item, nv) {
       // 赋值时跳过内部监听
       item.watcher.unwatch();
-      this.value[item.field] = nv;
+      if(item.syntaxData.syntaxNames) {
+        item.syntaxData.writeBack(this.modelValue, nv)
+      } else {
+        this.modelValue[item.field] = nv;
+      }
       item.watcher.watch();
     },
 
@@ -304,8 +300,7 @@ const __sfc__ = {
       const target = {};
       target.watch = () => {
         // 每个表单项单独监听，避免相互影响
-        target.$watcher = this.$watch(`value.${item.field}`, (nv) => {
-          debugger
+        target.$watcher = this.$watch(`modelValue.${item.field}`, (nv) => {
           this.model[item.field] = nv;
         });
       };
@@ -319,8 +314,59 @@ const __sfc__ = {
 
     // 生成解构字段名
     createSyntaxNames(strName) {
-      const isValid = /\[|\{[^\[\]\{\}]\}|\}/.test(strName);
-      return isValid ? strName.match(/[^\[\]\{\},]/g) : null;
+      const isValid = /\[|\{[^\[\]\{\}]+\}|\]/.test(strName);
+      return isValid ? strName.match(/[^\[\]\{\},]+/g) : null;
+    },
+
+    // 生成解构功能数据
+    createSyntaxData(strName) {
+      let type = 'string'
+      if(/\{[^\[\]\{\}]+\}/.test(strName)) {
+        type = 'object'
+      } 
+      
+      if(/\[[^\[\]\{\}]+\]/.test(strName)) {
+        type = 'array'
+      }
+
+      const syntaxNames = type !== 'string' ? strName.match(/[^\[\]\{\},\s]+/g) : null
+      const resolve = (source) => {
+        if(!syntaxNames || !syntaxNames.length) {
+          return source
+        }
+
+        if(type === 'object') {
+          return syntaxNames.reduce((t, x) => {
+            t[x] = source && source[x]
+            return t
+          }, {})
+        }
+
+        if(type === 'array') {
+          return syntaxNames.map(x => source && source[x])
+        }
+
+        return source
+      }
+      const writeBack = (source, value) => {
+        syntaxNames.forEach((name, i) => {
+          let val = value
+          if(type === 'object') {
+            val = value && value[name]
+          }
+          if(type === 'array') {
+            val = value[i]
+          }
+          source[name] = val
+        })
+      }
+
+      return {
+        type,
+        resolve,
+        writeBack,
+        syntaxNames
+      }
     },
 
     // 生成自定义渲染器
@@ -344,13 +390,18 @@ const __sfc__ = {
 
       if (suggest) {
         _effects.suggest = {
-          trigger: "focus",
-          times: "once",
+          trigger: 'focus',
+          times: 'once',
           lazy: true,
-          dataPropName: "options",
+          dataPropName: 'options',
           isOnceAlready: false,
           ...suggest,
         };
+
+        if(dependency) {
+          _effects.suggest.times = 'every'
+        }
+        
         const {
           loader,
           trigger,
@@ -369,9 +420,9 @@ const __sfc__ = {
         });
 
         // 聚焦时加载
-        if (trigger === "focus") {
+        // if (trigger === "focus") {
           item.lisenters.focus = [].concat(item.lisenters.focus || [], load);
-        }
+        // }
 
         // 即时加载
         if (lazy === false) {
@@ -453,6 +504,12 @@ const __sfc__ = {
           });
           return handler;
         },
+        required(nv) {
+          return items.map((x) => {
+            const rule = [].concat(x.rule || []).find(y => y.required !== undefined)
+            rule && (rule.required = nv)
+          });
+        },
         getRefs() {
           return items.map((x) => vm.$refs[x.ref]);
         },
@@ -504,7 +561,7 @@ const __sfc__ = {
   },
 };
 
-import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, resolveDynamicComponent as _resolveDynamicComponent, createBlock as _createBlock, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, toHandlers as _toHandlers, mergeProps as _mergeProps, createElementVNode as _createElementVNode, normalizeClass as _normalizeClass, createVNode as _createVNode } from "vue"
+import { renderList as _renderList, Fragment as _Fragment, openBlock as _openBlock, createElementBlock as _createElementBlock, createCommentVNode as _createCommentVNode, resolveDynamicComponent as _resolveDynamicComponent, createBlock as _createBlock, toDisplayString as _toDisplayString, createTextVNode as _createTextVNode, resolveComponent as _resolveComponent, withCtx as _withCtx, toHandlers as _toHandlers, mergeProps as _mergeProps, createVNode as _createVNode, createElementVNode as _createElementVNode, normalizeClass as _normalizeClass } from "vue"
 
 const _hoisted_1 = { class: "x-form" }
 const _hoisted_2 = { class: "x-form-item-component" }
@@ -514,8 +571,11 @@ const _hoisted_3 = {
 }
 function render(_ctx, _cache, $props, $setup, $data, $options) {
   const _component_el_radio = _resolveComponent("el-radio")
+  const _component_el_radio_group = _resolveComponent("el-radio-group")
   const _component_el_checkbox = _resolveComponent("el-checkbox")
+  const _component_el_checkbox_group = _resolveComponent("el-checkbox-group")
   const _component_el_option = _resolveComponent("el-option")
+  const _component_el_select = _resolveComponent("el-select")
   const _component_el_form_item = _resolveComponent("el-form-item")
   const _component_el_col = _resolveComponent("el-col")
   const _component_el_row = _resolveComponent("el-row")
@@ -533,9 +593,10 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
             (_openBlock(true), _createElementBlock(_Fragment, null, _renderList($data.items, (item, index) => {
               return (_openBlock(), _createBlock(_component_el_col, {
                 key: item.field + '.' + index,
-                span: item.hidden($data.model, item) ? 0 : item.span,
+                span: item.hidden($data.model, item) || item.state.hidden ? 0 : item.span,
+                xs: 24,
                 offset: item.offset,
-                class: _normalizeClass(item.offsetRight ? 'ant-col-offset-right-' + item.offsetRight : '')
+                class: _normalizeClass(item.offsetRight ? 'form-col-offset-right-' + item.offsetRight : '')
               }, {
                 default: _withCtx(() => [
                   (
@@ -545,7 +606,7 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
                     ? (_openBlock(), _createBlock(_component_el_form_item, {
                         key: 0,
                         label: item.label,
-                        name: item.field,
+                        prop: item.field,
                         rules: item.rule,
                         class: _normalizeClass({
               'x-form-flex-item': item.editor.prefix || item.editor.suffix,
@@ -567,18 +628,19 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
                             : (_openBlock(), _createElementBlock(_Fragment, { key: 2 }, [
                                 _createCommentVNode(" 一般输入组件 "),
                                 _createElementVNode("div", _hoisted_2, [
-                                  (_openBlock(), _createBlock(_resolveDynamicComponent(item.editor.component), _mergeProps({
-                                    ref_for: true,
-                                    ref: item.ref,
-                                    value: $data.model[item.field],
-                                    "onUpdate:value": $event => (($data.model[item.field]) = $event)
-                                  }, item.editor.props, _toHandlers(item.editor.events)), {
-                                    default: _withCtx(() => [
-                                      (item.editor.component === $data.comps.RadioGroup)
-                                        ? (_openBlock(true), _createElementBlock(_Fragment, { key: 0 }, _renderList(item.editor.props.options, (radio, index) => {
+                                  _createCommentVNode(" 单选 "),
+                                  (item.editor.component === 'el-radio-group')
+                                    ? (_openBlock(), _createBlock(_component_el_radio_group, _mergeProps({
+                                        key: 0,
+                                        ref_for: true,
+                                        ref: item.ref,
+                                        modelValue: $data.model[item.field],
+                                        "onUpdate:modelValue": $event => (($data.model[item.field]) = $event)
+                                      }, item.editor.props, _toHandlers(item.editor.events)), {
+                                        default: _withCtx(() => [
+                                          (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(item.editor.props.options, (radio) => {
                                             return (_openBlock(), _createBlock(_component_el_radio, {
-                                              key: index,
-                                              style: {"margin-top":"10px"},
+                                              key: radio.value,
                                               label: radio.value,
                                               disabled: radio.disabled
                                             }, {
@@ -588,32 +650,65 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
                                               _: 2 /* DYNAMIC */
                                             }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label", "disabled"]))
                                           }), 128 /* KEYED_FRAGMENT */))
-                                        : _createCommentVNode("v-if", true),
-                                      (item.editor.component === $data.comps.CheckboxGroup)
-                                        ? (_openBlock(true), _createElementBlock(_Fragment, { key: 1 }, _renderList(item.editor.props.options, (checkbox, index) => {
-                                            return (_openBlock(), _createBlock(_component_el_checkbox, {
-                                              key: index,
-                                              label: checkbox.value
-                                            }, {
-                                              default: _withCtx(() => [
-                                                _createTextVNode(_toDisplayString(checkbox.label), 1 /* TEXT */)
-                                              ]),
-                                              _: 2 /* DYNAMIC */
-                                            }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label"]))
-                                          }), 128 /* KEYED_FRAGMENT */))
-                                        : _createCommentVNode("v-if", true),
-                                      (item.editor.component === $data.comps.Select)
-                                        ? (_openBlock(true), _createElementBlock(_Fragment, { key: 2 }, _renderList(item.editor.props.options, (option, index) => {
+                                        ]),
+                                        _: 2 /* DYNAMIC */
+                                      }, 1040 /* FULL_PROPS, DYNAMIC_SLOTS */, ["modelValue", "onUpdate:modelValue"]))
+                                    : (item.editor.component === 'el-checkbox-group')
+                                      ? (_openBlock(), _createElementBlock(_Fragment, { key: 1 }, [
+                                          _createCommentVNode(" 复选 "),
+                                          _createVNode(_component_el_checkbox_group, _mergeProps({
+                                            ref_for: true,
+                                            ref: item.ref,
+                                            modelValue: $data.model[item.field],
+                                            "onUpdate:modelValue": $event => (($data.model[item.field]) = $event)
+                                          }, item.editor.props, _toHandlers(item.editor.events)), {
+                                            default: _withCtx(() => [
+                                              (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(item.editor.props.options, (checkbox) => {
+                                                return (_openBlock(), _createBlock(_component_el_checkbox, {
+                                                  key: checkbox.value,
+                                                  label: checkbox.value,
+                                                  name: item.field
+                                                }, {
+                                                  default: _withCtx(() => [
+                                                    _createTextVNode(_toDisplayString(checkbox.label), 1 /* TEXT */)
+                                                  ]),
+                                                  _: 2 /* DYNAMIC */
+                                                }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label", "name"]))
+                                              }), 128 /* KEYED_FRAGMENT */))
+                                            ]),
+                                            _: 2 /* DYNAMIC */
+                                          }, 1040 /* FULL_PROPS, DYNAMIC_SLOTS */, ["modelValue", "onUpdate:modelValue"])
+                                        ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
+                                      : _createCommentVNode("v-if", true),
+                                  _createCommentVNode(" 下拉 "),
+                                  (item.editor.component === 'el-select')
+                                    ? (_openBlock(), _createBlock(_component_el_select, _mergeProps({
+                                        key: 2,
+                                        ref_for: true,
+                                        ref: item.ref,
+                                        modelValue: $data.model[item.field],
+                                        "onUpdate:modelValue": $event => (($data.model[item.field]) = $event)
+                                      }, item.editor.props, _toHandlers(item.editor.events)), {
+                                        default: _withCtx(() => [
+                                          (_openBlock(true), _createElementBlock(_Fragment, null, _renderList(item.editor.props.options, (option) => {
                                             return (_openBlock(), _createBlock(_component_el_option, {
-                                              key: index,
+                                              key: option.value,
                                               label: option.label,
                                               value: option.value
                                             }, null, 8 /* PROPS */, ["label", "value"]))
                                           }), 128 /* KEYED_FRAGMENT */))
-                                        : _createCommentVNode("v-if", true)
-                                    ]),
-                                    _: 2 /* DYNAMIC */
-                                  }, 1040 /* FULL_PROPS, DYNAMIC_SLOTS */, ["value", "onUpdate:value"]))
+                                        ]),
+                                        _: 2 /* DYNAMIC */
+                                      }, 1040 /* FULL_PROPS, DYNAMIC_SLOTS */, ["modelValue", "onUpdate:modelValue"]))
+                                    : (_openBlock(), _createElementBlock(_Fragment, { key: 3 }, [
+                                        _createCommentVNode(" 其他所有组件 "),
+                                        (_openBlock(), _createBlock(_resolveDynamicComponent(item.editor.component), _mergeProps({
+                                          ref_for: true,
+                                          ref: item.ref,
+                                          modelValue: $data.model[item.field],
+                                          "onUpdate:modelValue": $event => (($data.model[item.field]) = $event)
+                                        }, item.editor.props, _toHandlers(item.editor.events)), null, 16 /* FULL_PROPS */, ["modelValue", "onUpdate:modelValue"]))
+                                      ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */))
                                 ])
                               ], 2112 /* STABLE_FRAGMENT, DEV_ROOT_FRAGMENT */)),
                           _createCommentVNode(" 后置组件 "),
@@ -622,7 +717,7 @@ function render(_ctx, _cache, $props, $setup, $data, $options) {
                             : _createCommentVNode("v-if", true)
                         ]),
                         _: 2 /* DYNAMIC */
-                      }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label", "name", "rules", "class"]))
+                      }, 1032 /* PROPS, DYNAMIC_SLOTS */, ["label", "prop", "rules", "class"]))
                     : _createCommentVNode("v-if", true),
                   (item.state.hiddenWithHolder)
                     ? (_openBlock(), _createElementBlock("div", {
